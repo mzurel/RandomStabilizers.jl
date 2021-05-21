@@ -145,7 +145,7 @@ function symplectic(nQubits::BigInt, i::BigInt)
     if nQubits == 1
         return [k, multiTransvection(nQubits, [T;Tprime], [(BigInt(1) << (2*nQubits-2))])[1]]  # [f1,f2]
     else
-        return multiTransvection(nQubits, [T;Tprime], [(BigInt(1)<<(2*nQubits-1)), (BigInt(1) << (2*nQubits-2)), bigSymplectic(nQubits-1, i >>> (2*nQubits - 1))...])
+        return multiTransvection(nQubits, [T;Tprime], [(BigInt(1)<<(2*nQubits-1)), (BigInt(1) << (2*nQubits-2)), symplectic(nQubits-1, i >>> (2*nQubits - 1))...])
     end
 end
 
@@ -170,9 +170,9 @@ generating a random integer i between 1 and |Sp(2n,ℤ₂)| and returning symple
 """
 function randomSymplecticMatrix(nQubits)
     nQubits = BigInt(nQubits)
-    i = rand(1:symplecticGroupOrder)
+    i = rand(1:symplecticGroupOrder(nQubits))
     A = symplectic(nQubits, i)
-    A = [int2bit(nQubits, a) for a in A]
+    A = [int2bits(nQubits, a) for a in A]
     return A
 end
 
