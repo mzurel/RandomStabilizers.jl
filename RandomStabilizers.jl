@@ -1,7 +1,6 @@
 module RandomStabilizers
 
-export randomStabilizerState
-       randomSymplecticMatrix
+export randomStabilizerState, randomSymplecticMatrix, symplecticGroupOrder
 
 """
     hammingWeight(x)
@@ -172,7 +171,7 @@ generating a random integer i between 1 and |Sp(2n,ℤ₂)| and returning symple
 function randomSymplecticMatrix(nQubits)
     nQubits = BigInt(nQubits)
     i = rand(1:symplecticGroupOrder)
-    A = bigSymplectic(nQubits, i)
+    A = symplectic(nQubits, i)
     A = [int2bit(nQubits, a) for a in A]
     return A
 end
@@ -188,7 +187,7 @@ orthogonal standard symplectic basis vectors.
 function randomStabilizerState(nQubits)
     nQubits = BigInt(nQubits)
     i = rand(1:symplecticGroupOrder(nQubits))
-    A = bigSymplectic(nQubits, i)[1:2:2*nQubits]
+    A = symplectic(nQubits, i)[1:2:2*nQubits]
     A = [int2bits(nQubits, a) for a in A]
     A = [[a[1:2:2*nQubits]; a[2:2:2*nQubits]] for a in A]
     return A
