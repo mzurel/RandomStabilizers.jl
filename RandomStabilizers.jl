@@ -1,3 +1,13 @@
+module RandomStabilizers
+
+export randomStabilizerState
+       randomSymplecticMatrix
+
+"""
+    hammingWeight(x)
+
+Return the number of ones in the binary expansion of the integer x.
+"""
 function hammingWeight(x)
   y = 0
   while x > 0
@@ -7,22 +17,44 @@ function hammingWeight(x)
   return y
 end
 
+"""
+    getkthbit(x, k)
+
+Return the kth bit in the binary expansion of the integer k.
+"""
 function getkthBit(x, k)
     return (x >>> (k-1)) & 1
 end
 
+"""
+    symplecticForm(nQubits, a, b)
+
+Returns the symplectic form of a,b ∈ ℤ₂ⁿ×ℤ₂ⁿ defined by
+∑_{k=1}^{n} a[k]*b[n+k] + a[n+k]*b[k] mod 2.
+"""
 function symplecticForm(nQubits,a,b)
     J1 = reduce(⊻, 2^(2*k) for k in 0:(nQubits-1))
     J2 = (2^(2*nQubits)-1) ⊻ J1
     return hammingWeight(a & (((b >>> 1) & J1) ⊻ ((b << 1) & J2))) % 2
 end
 
-function transvection(nQubits, k, v)  # Applies the transvection Z_k to v
+"""
+    transvection(nQubits, k, v)
+
+k and v are integers whose binary expansions represent vectors in ℤ₂ⁿ×ℤ₂ⁿ.
+This function returns the symplectic transvection Zₖ[v]:=v+<k,v>k, represented
+as the binary expansion of an integer.
+"""
+function transvection(nQubits, k, v)
     return v ⊻ (symplecticForm(nQubits, k, v) * k)
 end
 
+"""
+    multiTransvection(nQubits, h, v)
+
+Apply all of the transvections in the Array h to all of the vectors in the Array v.
+"""
 function multiTransvection(nQubits, h, v)
-    # Apply all of the transvections in the Array h to all of the vectors in the Array v
     output = v
     for k in h
         output = [transvection(nQubits, k, u) for u in output]
@@ -30,7 +62,13 @@ function multiTransvection(nQubits, h, v)
     return output
 end
 
-function findTransvection(nQubits, x, y)  # Finds h1, h2 such that y = Z_h1 Z_h2 x
+"""
+    findTransvection(nQubits, x, y)
+
+This function finds vectors h₁,h₂ ∈ ℤ₂ⁿ×ℤ₂ⁿ such that y=Z_h₁ Z_h₂ x.  This procedure
+is described in the proof of Lemma 2 in J. Math. Phys. 55, 122202 (2014).
+"""
+function findTransvection(nQubits, x, y)
     if x == y
         return [0,0]
     elseif symplecticForm(nQubits, x, y) == 1
@@ -70,6 +108,12 @@ function findTransvection(nQubits, x, y)  # Finds h1, h2 such that y = Z_h1 Z_h2
     end
 end
 
+"""
+    symplecticGroupOrder(nQubits)
+
+Returns the order of the symplectic group Sp(2n,ℤ₂) according to
+https://groupprops.subwiki.org/wiki/Order_formulas_for_symplectic_groups
+"""
 function symplecticGroupOrder(nQubits)
     num = BigInt(2)^(nQubits^2)
     for k in 1:nQubits
@@ -78,28 +122,14 @@ function symplecticGroupOrder(nQubits)
     return num
 end
 
-function symplectic(nQubits, i)
-    s = (1<<(2*nQubits)) - 1; k = (i % s) + 1; i = floor(BigInt, i/s)
-    e1 = 1 << (2*nQubits-1)
-    T = findTransvection(nQubits, e1, k)
+"""
+    symplectic(nQubits, i)
 
-    e = e1 ⊻ ((i >>> 1) & (2^(2*nQubits-2)-1))
-    h0 = multiTransvection(nQubits, T, [e])[1]
-
-    if (i & 1)  == 1
-        Tprime = [h0]
-    else
-        Tprime = [h0,k]
-    end
-
-    if nQubits == 1
-        return [k, multiTransvection(nQubits, [T;Tprime], [(1 << (2*nQubits-2))])[1]]  # [f1,f2]
-    else
-        return multiTransvection(nQubits, [T;Tprime], [(1<<(2*nQubits-1)), (1 << (2*nQubits-2)), symplectic(nQubits-1, i >>> (2*nQubits - 1))...])
-    end
-end
-
-function bigSymplectic(nQubits::BigInt, i::BigInt)
+Returns the symplectic group element uniquely identified with the integer
+1≤i≤|Sp(2n,ℤ₂)|, according to the algorithm SYMPLECTICImproved from
+J. Math. Phys. 55, 122202 (2014).
+"""
+function symplectic(nQubits::BigInt, i::BigInt)
     s = (BigInt(1)<<(2*nQubits)) - 1; k = (i % s) + 1; i = floor(BigInt, i/s)
     e1 = BigInt(1) << (2*nQubits-1)
     T = findTransvection(nQubits, e1, k)
@@ -120,15 +150,26 @@ function bigSymplectic(nQubits::BigInt, i::BigInt)
     end
 end
 
-function int2bits(nQubits, num)
+"""
+    int2bits(nQubits, num)
+
+Return the binary expansion of the integer x as a bitstring of length 2*nQubits.
+"""
+function int2bits(nQubits, x)
     vec = zeros(Int8, 2*nQubits)
     for k in 1:2*nQubits
-        vec[end-k+1] = (num >>> (k-1)) & 1
+        vec[end-k+1] = (x >>> (k-1)) & 1
     end
     return vec
 end
 
-function randomSymplecticGroupElement(nQubits)
+"""
+    randomSymplecticMatrix(nQubits)
+
+Return a random element of the symplectic group Sp(2n,ℤ₂).  This is obtained by
+generating a random integer i between 1 and |Sp(2n,ℤ₂)| and returning symplectic(nQubits, i).
+"""
+function randomSymplecticMatrix(nQubits)
     nQubits = BigInt(nQubits)
     i = rand(1:symplecticGroupOrder)
     A = bigSymplectic(nQubits, i)
@@ -136,6 +177,14 @@ function randomSymplecticGroupElement(nQubits)
     return A
 end
 
+"""
+    randomStabilizerState(nQubits)
+
+Returns the check matrix of a random n-qubit stabilizer state.  This is obtained
+by generating a random element T of Sp(2n,ℤ₂) with the function randomSymplecticMatrix
+and returning the Matrix with Te₁,Te₂,... as rows where e₁,e₂,... are n pairwise
+orthogonal standard symplectic basis vectors.
+"""
 function randomStabilizerState(nQubits)
     nQubits = BigInt(nQubits)
     i = rand(1:symplecticGroupOrder(nQubits))
@@ -143,4 +192,6 @@ function randomStabilizerState(nQubits)
     A = [int2bits(nQubits, a) for a in A]
     A = [[a[1:2:2*nQubits]; a[2:2:2*nQubits]] for a in A]
     return A
+end
+
 end
